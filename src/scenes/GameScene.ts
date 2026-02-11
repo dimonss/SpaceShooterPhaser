@@ -107,15 +107,20 @@ export class GameScene extends Phaser.Scene {
             loop: true,
         });
 
-        // Power-up timer
+        // Power-up timer (rare, with randomness)
         this.time.addEvent({
-            delay: 8000,
-            callback: this.spawnPowerup,
+            delay: 24000,
+            callback: () => {
+                // 50% chance to actually spawn
+                if (Math.random() < 0.5) {
+                    this.spawnPowerup();
+                }
+            },
             callbackScope: this,
             loop: true,
         });
 
-        // Difficulty ramp
+        // Difficulty rampq
         this.time.addEvent({
             delay: 5000,
             callback: () => {
