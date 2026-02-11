@@ -15,7 +15,7 @@ export class GameScene extends Phaser.Scene {
     private fireRate = 180;
     private asteroidTimer!: Phaser.Time.TimerEvent;
     private difficulty = 1;
-    private difficultyTimer!: Phaser.Time.TimerEvent;
+
     private isInvulnerable = false;
     private stars: Phaser.GameObjects.Image[] = [];
     private engineParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -111,13 +111,18 @@ export class GameScene extends Phaser.Scene {
         });
 
         // Difficulty ramp
-        this.difficultyTimer = this.time.addEvent({
+        this.time.addEvent({
             delay: 5000,
             callback: () => {
                 this.difficulty += 0.2;
                 // Speed up asteroid spawning
                 const newDelay = Math.max(200, 800 - this.difficulty * 50);
-                this.asteroidTimer.delay = newDelay;
+                this.asteroidTimer.reset({
+                    delay: newDelay,
+                    callback: this.spawnAsteroid,
+                    callbackScope: this,
+                    loop: true,
+                });
             },
             callbackScope: this,
             loop: true,
@@ -298,7 +303,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     private playerHitAsteroid(
-        playerObj: Phaser.Types.Physics.Arcade.GameObjectWithBody,
+        _playerObj: Phaser.Types.Physics.Arcade.GameObjectWithBody,
         asteroidObj: Phaser.Types.Physics.Arcade.GameObjectWithBody
     ): void {
         if (this.isInvulnerable) return;
