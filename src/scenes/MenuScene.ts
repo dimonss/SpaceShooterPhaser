@@ -114,11 +114,12 @@ export class MenuScene extends Phaser.Scene {
             });
         });
 
-        // Controls info
-        const controlsText = this.add.text(width / 2, height - 80, [
-            '← →  ↑ ↓   MOVE',
-            'SPACE   SHOOT',
-        ].join('\n'), {
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const controlsLines = isTouchDevice
+            ? ['🕹  JOYSTICK   MOVE', '🔴  BUTTON   SHOOT']
+            : ['← →  ↑ ↓   MOVE', 'SPACE   SHOOT'];
+
+        const controlsText = this.add.text(width / 2, height - 80, controlsLines.join('\n'), {
             fontFamily: 'monospace',
             fontSize: '13px',
             color: '#445566',

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { MobileControls } from '../utils/MobileControls';
 
 export class GameScene extends Phaser.Scene {
     private player!: Phaser.Physics.Arcade.Image;
@@ -19,6 +20,7 @@ export class GameScene extends Phaser.Scene {
     private isInvulnerable = false;
     private stars: Phaser.GameObjects.Image[] = [];
     private engineParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
+    private mobileControls!: MobileControls;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -76,6 +78,9 @@ export class GameScene extends Phaser.Scene {
         // === Input ===
         this.cursors = this.input.keyboard!.createCursorKeys();
         this.spaceKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+
+        // === Mobile controls ===
+        this.mobileControls = new MobileControls();
 
         // === UI ===
         this.scoreText = this.add.text(20, 16, 'SCORE: 0', {
@@ -159,26 +164,36 @@ export class GameScene extends Phaser.Scene {
 
     update(time: number): void {
         const speed = 300;
+        const touch = this.mobileControls.input;
 
-        // === Player movement ===
+        // === Player movement (keyboard + touch) ===
+        let vx = 0;
+        let vy = 0;
+
         if (this.cursors.left.isDown) {
-            this.player.setVelocityX(-speed);
+            vx = -speed;
         } else if (this.cursors.right.isDown) {
-            this.player.setVelocityX(speed);
-        } else {
-            this.player.setVelocityX(0);
+            vx = speed;
         }
 
         if (this.cursors.up.isDown) {
-            this.player.setVelocityY(-speed);
+            vy = -speed;
         } else if (this.cursors.down.isDown) {
-            this.player.setVelocityY(speed);
-        } else {
-            this.player.setVelocityY(0);
+            vy = speed;
         }
 
-        // === Shooting ===
-        if (this.spaceKey.isDown && time > this.lastFired + this.fireRate) {
+        // Mobile joystick overrides if active
+        if (Math.abs(touch.x) > 0.15 || Math.abs(touch.y) > 0.15) {
+            vx = touch.x * speed;
+            vy = touch.y * speed;
+        }
+
+        this.player.setVelocityX(vx);
+        this.player.setVelocityY(vy);
+
+        // === Shooting (keyboard + touch) ===
+        const wantFire = this.spaceKey.isDown || touch.fire;
+        if (wantFire && time > this.lastFired + this.fireRate) {
             this.fireBullet();
             this.lastFired = time;
         }
@@ -346,7 +361,7 @@ export class GameScene extends Phaser.Scene {
         powerup.destroy();
 
         // Restore a life (max 5)
-        if (this.lives < 5) {
+        if (this.lives < 3) {
             this.lives++;
             this.updateLivesDisplay();
         }
@@ -406,6 +421,7 @@ export class GameScene extends Phaser.Scene {
         this.player.setActive(false);
         (this.player.body as Phaser.Physics.Arcade.Body).stop();
         this.engineParticles.stop();
+        this.mobileControls.destroy();
 
         this.cameras.main.shake(400, 0.02);
 
