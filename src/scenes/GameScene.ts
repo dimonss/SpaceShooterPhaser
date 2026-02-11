@@ -22,6 +22,13 @@ export class GameScene extends Phaser.Scene {
     private engineParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
     private mobileControls!: MobileControls;
 
+    // Pause
+    private escKey!: Phaser.Input.Keyboard.Key;
+    private isPaused = false;
+    private pauseOverlay!: Phaser.GameObjects.Rectangle;
+    private pauseText!: Phaser.GameObjects.Text;
+    private pauseBtn!: Phaser.GameObjects.Text;
+
     constructor() {
         super({ key: 'GameScene' });
     }
@@ -120,7 +127,7 @@ export class GameScene extends Phaser.Scene {
             loop: true,
         });
 
-        // Difficulty rampq
+        // Difficulty ramp
         this.time.addEvent({
             delay: 5000,
             callback: () => {
@@ -163,11 +170,50 @@ export class GameScene extends Phaser.Scene {
             this
         );
 
+        // === Pause (ESC key) ===
+        this.escKey = this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.ESC);
+        this.escKey.on('down', () => this.togglePause());
+
+        // Pause overlay (hidden initially)
+        this.pauseOverlay = this.add.rectangle(
+            width / 2, height / 2, width, height, 0x000000, 0.6
+        );
+        this.pauseOverlay.setDepth(50);
+        this.pauseOverlay.setVisible(false);
+        this.pauseOverlay.setInteractive();
+        this.pauseOverlay.on('pointerdown', () => this.togglePause());
+
+        this.pauseText = this.add.text(width / 2, height / 2 - 20, '⏸  PAUSED', {
+            fontFamily: '"Segoe UI", Arial, sans-serif',
+            fontSize: '48px',
+            color: '#ffffff',
+            fontStyle: 'bold',
+            shadow: { offsetX: 0, offsetY: 0, color: '#00ccff', blur: 20, fill: true },
+        });
+        this.pauseText.setOrigin(0.5);
+        this.pauseText.setDepth(51);
+        this.pauseText.setVisible(false);
+
+        // Pause button (visible for mobile, small on desktop)
+        this.pauseBtn = this.add.text(width / 2, 16, '⏸', {
+            fontFamily: 'monospace',
+            fontSize: '28px',
+            color: '#aaddff',
+        });
+        this.pauseBtn.setOrigin(0.5, 0);
+        this.pauseBtn.setDepth(20);
+        this.pauseBtn.setInteractive({ useHandCursor: true });
+        this.pauseBtn.on('pointerdown', () => this.togglePause());
+
+        this.isPaused = false;
+
         // Fade in
         this.cameras.main.fadeIn(500, 0, 0, 0);
     }
 
     update(time: number): void {
+        if (this.isPaused) return;
+
         const speed = 300;
         const touch = this.mobileControls.input;
 
@@ -417,6 +463,26 @@ export class GameScene extends Phaser.Scene {
     private updateLivesDisplay(): void {
         const hearts = Array(this.lives).fill('❤️').join(' ');
         this.livesText.setText(hearts);
+    }
+
+    private togglePause(): void {
+        this.isPaused = !this.isPaused;
+
+        if (this.isPaused) {
+            this.physics.pause();
+            this.tweens.pauseAll();
+            this.time.paused = true;
+            this.pauseOverlay.setVisible(true);
+            this.pauseText.setVisible(true);
+            this.pauseBtn.setText('▶');
+        } else {
+            this.physics.resume();
+            this.tweens.resumeAll();
+            this.time.paused = false;
+            this.pauseOverlay.setVisible(false);
+            this.pauseText.setVisible(false);
+            this.pauseBtn.setText('⏸');
+        }
     }
 
     private gameOver(): void {
