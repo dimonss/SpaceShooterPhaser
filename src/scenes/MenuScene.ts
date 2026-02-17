@@ -31,7 +31,7 @@ export class MenuScene extends Phaser.Scene {
         }
 
         // Title
-        const title = this.add.text(width / 2, height / 2 - 120, '🚀 SPACE SHOOTER', {
+        const title = this.add.text(width / 2, height / 2 - 140, '🚀 SPACE SHOOTER', {
             fontFamily: '"Segoe UI", Arial, sans-serif',
             fontSize: '52px',
             color: '#00ccff',
@@ -57,7 +57,7 @@ export class MenuScene extends Phaser.Scene {
         });
 
         // Subtitle
-        const subtitle = this.add.text(width / 2, height / 2 - 55, 'DEFEND THE GALAXY', {
+        const subtitle = this.add.text(width / 2, height / 2 - 75, 'DEFEND THE GALAXY', {
             fontFamily: 'monospace',
             fontSize: '16px',
             color: '#6688aa',
@@ -65,10 +65,48 @@ export class MenuScene extends Phaser.Scene {
         });
         subtitle.setOrigin(0.5);
 
-        // Play button
+        // === Username label ===
+        const usernameLabel = this.add.text(width / 2, height / 2 - 30, 'ENTER YOUR CALLSIGN', {
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            color: '#556677',
+            letterSpacing: 3,
+        });
+        usernameLabel.setOrigin(0.5);
+
+        // === Username input (DOM element) ===
+        const inputHtml = `<input
+            type="text"
+            id="username-input"
+            maxlength="16"
+            placeholder="PILOT"
+            style="
+                width: 220px;
+                padding: 10px 16px;
+                font-family: monospace;
+                font-size: 18px;
+                color: #00eeff;
+                background: rgba(0, 170, 255, 0.08);
+                border: 2px solid rgba(0, 204, 255, 0.4);
+                border-radius: 10px;
+                outline: none;
+                text-align: center;
+                letter-spacing: 2px;
+                text-transform: uppercase;
+                caret-color: #00ccff;
+                transition: border-color 0.3s, box-shadow 0.3s;
+            "
+            onfocus="this.style.borderColor='rgba(0,204,255,0.8)'; this.style.boxShadow='0 0 20px rgba(0,204,255,0.3)';"
+            onblur="this.style.borderColor='rgba(0,204,255,0.4)'; this.style.boxShadow='none';"
+        />`;
+
+        const inputElement = this.add.dom(width / 2, height / 2 + 8).createFromHTML(inputHtml);
+        inputElement.setDepth(30);
+
+        // === Play button ===
         const buttonBg = this.add.graphics();
         const btnX = width / 2 - 100;
-        const btnY = height / 2 + 20;
+        const btnY = height / 2 + 55;
         const btnW = 200;
         const btnH = 56;
 
@@ -108,6 +146,10 @@ export class MenuScene extends Phaser.Scene {
         });
 
         hitZone.on('pointerdown', () => {
+            const input = inputElement.getChildByID('username-input') as HTMLInputElement;
+            const username = (input?.value?.trim() || 'PILOT').toUpperCase();
+            this.registry.set('username', username);
+
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
                 this.scene.start('GameScene');
@@ -129,7 +171,7 @@ export class MenuScene extends Phaser.Scene {
         controlsText.setOrigin(0.5);
 
         // Decorative ship
-        const ship = this.add.image(width / 2, height / 2 + 130, 'player');
+        const ship = this.add.image(width / 2, height / 2 + 160, 'player');
         ship.setScale(1.5);
         ship.setAlpha(0.3);
         this.tweens.add({

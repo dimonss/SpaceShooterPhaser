@@ -499,7 +499,8 @@ export class GameScene extends Phaser.Scene {
         this.time.delayedCall(1000, () => {
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
-                this.scene.start('GameOverScene', { score: this.score });
+                const username = this.registry.get('username') || 'PILOT';
+                this.scene.start('GameOverScene', { score: this.score, username });
             });
         });
     }

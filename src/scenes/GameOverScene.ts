@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { ScoreManager } from '../utils/ScoreManager';
 
 export class GameOverScene extends Phaser.Scene {
     private stars: Phaser.GameObjects.Image[] = [];
@@ -7,9 +8,13 @@ export class GameOverScene extends Phaser.Scene {
         super({ key: 'GameOverScene' });
     }
 
-    create(data: { score: number }): void {
+    create(data: { score: number; username: string }): void {
         const { width, height } = this.cameras.main;
         const finalScore = data.score ?? 0;
+        const username = data.username ?? 'PILOT';
+
+        // Save the score to localStorage
+        ScoreManager.saveScore(username, finalScore);
 
         // Starfield
         for (let i = 0; i < 60; i++) {
@@ -27,7 +32,7 @@ export class GameOverScene extends Phaser.Scene {
         overlay.fillRect(0, 0, width, height);
 
         // Game Over title
-        const title = this.add.text(width / 2, height / 2 - 100, 'GAME OVER', {
+        const title = this.add.text(width / 2, height / 2 - 160, 'GAME OVER', {
             fontFamily: '"Segoe UI", Arial, sans-serif',
             fontSize: '56px',
             color: '#ff4466',
@@ -50,8 +55,18 @@ export class GameOverScene extends Phaser.Scene {
             ease: 'Back.easeOut',
         });
 
-        // Score
-        const scoreLabel = this.add.text(width / 2, height / 2 - 20, 'FINAL SCORE', {
+        // Player name
+        const nameLabel = this.add.text(width / 2, height / 2 - 85, username, {
+            fontFamily: 'monospace',
+            fontSize: '16px',
+            color: '#00ccff',
+            letterSpacing: 3,
+        });
+        nameLabel.setOrigin(0.5);
+        nameLabel.setAlpha(0);
+
+        // Score label
+        const scoreLabel = this.add.text(width / 2, height / 2 - 60, 'FINAL SCORE', {
             fontFamily: 'monospace',
             fontSize: '14px',
             color: '#6688aa',
@@ -60,7 +75,7 @@ export class GameOverScene extends Phaser.Scene {
         scoreLabel.setOrigin(0.5);
         scoreLabel.setAlpha(0);
 
-        const scoreText = this.add.text(width / 2, height / 2 + 15, `${finalScore}`, {
+        const scoreText = this.add.text(width / 2, height / 2 - 30, `${finalScore}`, {
             fontFamily: '"Segoe UI", Arial, sans-serif',
             fontSize: '48px',
             color: '#ffcc00',
@@ -77,16 +92,59 @@ export class GameOverScene extends Phaser.Scene {
         scoreText.setAlpha(0);
 
         this.tweens.add({
-            targets: [scoreLabel, scoreText],
+            targets: [nameLabel, scoreLabel, scoreText],
             alpha: 1,
             duration: 600,
             delay: 400,
             ease: 'Power2',
         });
 
-        // Restart button
+        // === Leaderboard ===
+        const topScores = ScoreManager.getTopScores(5);
+        const lbStartY = height / 2 + 20;
+
+        const lbTitle = this.add.text(width / 2, lbStartY, '🏆  TOP SCORES', {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            color: '#6688aa',
+            letterSpacing: 3,
+        });
+        lbTitle.setOrigin(0.5);
+        lbTitle.setAlpha(0);
+
+        const lbEntries: Phaser.GameObjects.Text[] = [lbTitle];
+
+        topScores.forEach((entry, index) => {
+            const isCurrentRun = entry.username === username && entry.score === finalScore;
+            const color = isCurrentRun ? '#ffcc00' : '#88aacc';
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+
+            const entryText = this.add.text(
+                width / 2,
+                lbStartY + 28 + index * 24,
+                `${medal} ${entry.username.padEnd(12)} ${String(entry.score).padStart(6)}`,
+                {
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    color,
+                }
+            );
+            entryText.setOrigin(0.5);
+            entryText.setAlpha(0);
+            lbEntries.push(entryText);
+        });
+
+        this.tweens.add({
+            targets: lbEntries,
+            alpha: 1,
+            duration: 500,
+            delay: 600,
+            ease: 'Power2',
+        });
+
+        // === Restart button ===
         const btnX = width / 2 - 110;
-        const btnY = height / 2 + 80;
+        const btnY = lbStartY + 28 + Math.max(topScores.length, 1) * 24 + 20;
         const btnW = 220;
         const btnH = 52;
 
