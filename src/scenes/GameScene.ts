@@ -18,6 +18,7 @@ export class GameScene extends Phaser.Scene {
     private difficulty = 1;
 
     private isInvulnerable = false;
+    private isGameOver = false;
     private stars: Phaser.GameObjects.Image[] = [];
     private engineParticles!: Phaser.GameObjects.Particles.ParticleEmitter;
     private mobileControls!: MobileControls;
@@ -39,6 +40,7 @@ export class GameScene extends Phaser.Scene {
         this.lives = 3;
         this.difficulty = 1;
         this.isInvulnerable = false;
+        this.isGameOver = false;
 
         // === Scrolling starfield ===
         this.stars = [];
@@ -212,7 +214,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     update(time: number): void {
-        if (this.isPaused) return;
+        if (this.isPaused || this.isGameOver) return;
 
         const speed = 300;
         const touch = this.mobileControls.input;
@@ -372,7 +374,7 @@ export class GameScene extends Phaser.Scene {
         _playerObj: Phaser.Types.Physics.Arcade.GameObjectWithBody,
         asteroidObj: Phaser.Types.Physics.Arcade.GameObjectWithBody
     ): void {
-        if (this.isInvulnerable) return;
+        if (this.isInvulnerable || this.isGameOver) return;
 
         const asteroid = asteroidObj as Phaser.Physics.Arcade.Image;
         this.createExplosion(asteroid.x, asteroid.y);
@@ -486,11 +488,16 @@ export class GameScene extends Phaser.Scene {
     }
 
     private gameOver(): void {
+        if (this.isGameOver) return;
+        this.isGameOver = true;
+
         // Explosion on player
         this.createExplosion(this.player.x, this.player.y);
         this.player.setVisible(false);
         this.player.setActive(false);
-        (this.player.body as Phaser.Physics.Arcade.Body).stop();
+        const body = this.player.body as Phaser.Physics.Arcade.Body;
+        body.stop();
+        body.enable = false;
         this.engineParticles.stop();
         this.mobileControls.destroy();
 
