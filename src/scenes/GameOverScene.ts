@@ -46,6 +46,7 @@ export class GameOverScene extends Phaser.Scene {
             },
         });
         title.setOrigin(0.5);
+        title.setPadding(32);
         title.setAlpha(0);
         this.tweens.add({
             targets: title,

@@ -45,6 +45,7 @@ export class MenuScene extends Phaser.Scene {
             },
         });
         title.setOrigin(0.5);
+        title.setPadding(28);
 
         // Title float animation
         this.tweens.add({
