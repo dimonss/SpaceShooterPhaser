@@ -1,14 +1,25 @@
 import Phaser from 'phaser';
+import { authService } from '../services/AuthService';
 
 export class MenuScene extends Phaser.Scene {
     private stars: Phaser.GameObjects.Image[] = [];
+    private bestScore = 0;
 
     constructor() {
         super({ key: 'MenuScene' });
     }
 
-    create(): void {
+    async create(): Promise<void> {
         const { width, height } = this.cameras.main;
+
+        // Load best score from backend
+        try {
+            const fields = await authService.getFields();
+            const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
+            this.bestScore = gameData?.bestScore ?? 0;
+        } catch {
+            this.bestScore = 0;
+        }
 
         // Starfield background
         for (let i = 0; i < 100; i++) {
@@ -28,6 +39,30 @@ export class MenuScene extends Phaser.Scene {
                 repeat: -1,
                 ease: 'Sine.easeInOut',
             });
+        }
+
+        // --- User info (top-left corner) ---
+        const user = authService.getUser();
+        if (user) {
+            const displayName = user.firstName + (user.lastName ? ` ${user.lastName}` : '');
+            const userText = this.add.text(20, 16, `👤 ${displayName}`, {
+                fontFamily: '"Segoe UI", Arial, sans-serif',
+                fontSize: '16px',
+                color: '#88aacc',
+            });
+            userText.setDepth(20);
+        }
+
+        // --- Best score (top-right corner) ---
+        if (this.bestScore > 0) {
+            const bestText = this.add.text(width - 20, 16, `🏆 BEST: ${this.bestScore}`, {
+                fontFamily: 'monospace',
+                fontSize: '16px',
+                color: '#ffcc00',
+                shadow: { offsetX: 0, offsetY: 0, color: '#ffcc00', blur: 8, fill: true },
+            });
+            bestText.setOrigin(1, 0);
+            bestText.setDepth(20);
         }
 
         // Title
@@ -66,43 +101,47 @@ export class MenuScene extends Phaser.Scene {
         });
         subtitle.setOrigin(0.5);
 
-        // === Username label ===
-        const usernameLabel = this.add.text(width / 2, height / 2 - 30, 'ENTER YOUR CALLSIGN', {
-            fontFamily: 'monospace',
-            fontSize: '12px',
-            color: '#556677',
-            letterSpacing: 3,
-        });
-        usernameLabel.setOrigin(0.5);
+        let inputElement: Phaser.GameObjects.DOMElement | undefined;
 
-        // === Username input (DOM element) ===
-        const inputHtml = `<input
-            type="text"
-            id="username-input"
-            maxlength="16"
-            placeholder="PILOT"
-            style="
-                width: 220px;
-                padding: 10px 16px;
-                font-family: monospace;
-                font-size: 18px;
-                color: #00eeff;
-                background: rgba(0, 170, 255, 0.08);
-                border: 2px solid rgba(0, 204, 255, 0.4);
-                border-radius: 10px;
-                outline: none;
-                text-align: center;
-                letter-spacing: 2px;
-                text-transform: uppercase;
-                caret-color: #00ccff;
-                transition: border-color 0.3s, box-shadow 0.3s;
-            "
-            onfocus="this.style.borderColor='rgba(0,204,255,0.8)'; this.style.boxShadow='0 0 20px rgba(0,204,255,0.3)';"
-            onblur="this.style.borderColor='rgba(0,204,255,0.4)'; this.style.boxShadow='none';"
-        />`;
+        if (!user) {
+            // === Username label ===
+            const usernameLabel = this.add.text(width / 2, height / 2 - 30, 'ENTER YOUR CALLSIGN', {
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                color: '#556677',
+                letterSpacing: 3,
+            });
+            usernameLabel.setOrigin(0.5);
 
-        const inputElement = this.add.dom(width / 2, height / 2 + 8).createFromHTML(inputHtml);
-        inputElement.setDepth(30);
+            // === Username input (DOM element) ===
+            const inputHtml = `<input
+                type="text"
+                id="username-input"
+                maxlength="16"
+                placeholder="PILOT"
+                style="
+                    width: 220px;
+                    padding: 10px 16px;
+                    font-family: monospace;
+                    font-size: 18px;
+                    color: #00eeff;
+                    background: rgba(0, 170, 255, 0.08);
+                    border: 2px solid rgba(0, 204, 255, 0.4);
+                    border-radius: 10px;
+                    outline: none;
+                    text-align: center;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    caret-color: #00ccff;
+                    transition: border-color 0.3s, box-shadow 0.3s;
+                "
+                onfocus="this.style.borderColor='rgba(0,204,255,0.8)'; this.style.boxShadow='0 0 20px rgba(0,204,255,0.3)';"
+                onblur="this.style.borderColor='rgba(0,204,255,0.4)'; this.style.boxShadow='none';"
+            />`;
+
+            inputElement = this.add.dom(width / 2, height / 2 + 8).createFromHTML(inputHtml);
+            inputElement.setDepth(30);
+        }
 
         // === Play button ===
         const buttonBg = this.add.graphics();
@@ -147,9 +186,18 @@ export class MenuScene extends Phaser.Scene {
         });
 
         hitZone.on('pointerdown', () => {
-            const input = inputElement.getChildByID('username-input') as HTMLInputElement;
-            const username = (input?.value?.trim() || 'PILOT').toUpperCase();
-            this.registry.set('username', username);
+            let sessionUsername = 'PILOT';
+
+            if (user) {
+                // If authenticated, use the username from profile
+                sessionUsername = (user.username || user.firstName || 'PILOT').toUpperCase();
+            } else if (inputElement) {
+                // If guest, use the provided callsign
+                const input = inputElement.getChildByID('username-input') as HTMLInputElement;
+                sessionUsername = (input?.value?.trim() || 'PILOT').toUpperCase();
+            }
+
+            this.registry.set('username', sessionUsername);
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
@@ -170,6 +218,23 @@ export class MenuScene extends Phaser.Scene {
             lineSpacing: 6,
         });
         controlsText.setOrigin(0.5);
+
+        // --- Logout button (bottom-left) ---
+        const logoutText = this.add.text(20, height - 40, '🚪 Logout', {
+            fontFamily: 'monospace',
+            fontSize: '13px',
+            color: '#556677',
+        });
+        logoutText.setInteractive({ useHandCursor: true });
+        logoutText.on('pointerover', () => logoutText.setColor('#ff6688'));
+        logoutText.on('pointerout', () => logoutText.setColor('#556677'));
+        logoutText.on('pointerdown', async () => {
+            await authService.logout();
+            this.cameras.main.fadeOut(400, 0, 0, 0);
+            this.time.delayedCall(400, () => {
+                this.scene.start('LoginScene');
+            });
+        });
 
         // Decorative ship
         const ship = this.add.image(width / 2, height / 2 + 160, 'player');

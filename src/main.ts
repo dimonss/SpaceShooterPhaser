@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { LoginScene } from './scenes/LoginScene';
 import { BootScene } from './scenes/BootScene';
 import { MenuScene } from './scenes/MenuScene';
 import { GameScene } from './scenes/GameScene';
@@ -17,7 +18,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, MenuScene, GameScene, GameOverScene],
+  scene: [LoginScene, BootScene, MenuScene, GameScene, GameOverScene],
   scale: {
     mode: Phaser.Scale.RESIZE,
     autoCenter: Phaser.Scale.CENTER_BOTH,

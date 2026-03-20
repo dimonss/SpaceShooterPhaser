@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { ScoreManager } from '../utils/ScoreManager';
+import { authService } from '../services/AuthService';
 
 export class GameOverScene extends Phaser.Scene {
     private stars: Phaser.GameObjects.Image[] = [];
@@ -8,13 +9,43 @@ export class GameOverScene extends Phaser.Scene {
         super({ key: 'GameOverScene' });
     }
 
-    create(data: { score: number; username: string }): void {
+    async create(data: { score: number; username?: string }): Promise<void> {
         const { width, height } = this.cameras.main;
         const finalScore = data.score ?? 0;
         const username = data.username ?? 'PILOT';
 
+        // Check previous offline score before saving
+        const offlineScores = ScoreManager.getTopScores(100);
+        const prevOfflineEntry = offlineScores.find(e => e.username === username);
+        const prevOfflineBest = prevOfflineEntry ? prevOfflineEntry.score : 0;
+
         // Save the score to localStorage
         ScoreManager.saveScore(username, finalScore);
+
+        // --- Save best score & determine 'New Best' --------------------
+        let isNewBest = false;
+        
+        if (authService.isLoggedIn()) {
+            try {
+                const fields = await authService.getFields();
+                const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
+                const prevBest = gameData?.bestScore ?? 0;
+
+                if (finalScore > prevBest) {
+                    isNewBest = true;
+                    await authService.updateFields({
+                        spaceShooterGame: { bestScore: finalScore },
+                    });
+                }
+            } catch (err) {
+                console.error('Failed to save best score:', err);
+            }
+        } else {
+            // Guest mode check
+            if (finalScore > 0 && finalScore > prevOfflineBest) {
+                isNewBest = true;
+            }
+        }
 
         // Starfield
         for (let i = 0; i < 60; i++) {
@@ -100,9 +131,48 @@ export class GameOverScene extends Phaser.Scene {
             ease: 'Power2',
         });
 
+        let lbStartY = height / 2 + 20;
+
+        // --- NEW BEST badge -------------------------------------------
+        if (isNewBest) {
+            const bestBadge = this.add.text(width / 2, lbStartY + 10, '⭐ NEW BEST! ⭐', {
+                fontFamily: '"Segoe UI", Arial, sans-serif',
+                fontSize: '22px',
+                color: '#ffaa00',
+                fontStyle: 'bold',
+                shadow: {
+                    offsetX: 0, offsetY: 0,
+                    color: '#ffaa00', blur: 15, fill: true,
+                },
+            });
+            bestBadge.setOrigin(0.5);
+            bestBadge.setAlpha(0);
+
+            this.tweens.add({
+                targets: bestBadge,
+                alpha: 1,
+                scale: { from: 0.5, to: 1 },
+                duration: 600,
+                delay: 700,
+                ease: 'Back.easeOut',
+            });
+
+            // Pulsing glow on badge
+            this.tweens.add({
+                targets: bestBadge,
+                alpha: 0.7,
+                duration: 800,
+                yoyo: true,
+                repeat: -1,
+                delay: 1300,
+                ease: 'Sine.easeInOut',
+            });
+
+            lbStartY += 45; // Shift leaderboard down
+        }
+
         // === Leaderboard ===
         const topScores = ScoreManager.getTopScores(5);
-        const lbStartY = height / 2 + 20;
 
         const lbTitle = this.add.text(width / 2, lbStartY, '🏆  TOP SCORES', {
             fontFamily: 'monospace',
