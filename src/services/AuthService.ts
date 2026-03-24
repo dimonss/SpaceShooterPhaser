@@ -123,6 +123,25 @@ class AuthService {
         return result;
     }
 
+    async loginWithGoogle(idToken: string): Promise<AuthResult> {
+        const res = await fetch(`${API_BASE}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+        });
+
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Google login failed');
+        }
+
+        const result: AuthResult = await res.json();
+        saveTokens(result.accessToken, result.refreshToken);
+        saveUser(result.user);
+        this.user = result.user;
+        return result;
+    }
+
     async refreshTokens(): Promise<boolean> {
         const rt = getRefreshTokenValue();
         if (!rt) return false;

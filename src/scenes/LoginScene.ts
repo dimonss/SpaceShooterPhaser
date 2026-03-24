@@ -130,8 +130,49 @@ export class LoginScene extends Phaser.Scene {
             this.showTelegramWidget();
         });
 
+        // --- Google Login button ---------------------------------------
+        const gBtnY = btnY + btnH + 16;
+        const gBtnBg = this.add.graphics();
+        gBtnBg.fillStyle(0xdd4b39, 0.2);
+        gBtnBg.fillRoundedRect(btnX, gBtnY, btnW, btnH, 12);
+        gBtnBg.lineStyle(2, 0xdd4b39, 0.6);
+        gBtnBg.strokeRoundedRect(btnX, gBtnY, btnW, btnH, 12);
+
+        const gLoginText = this.add.text(width / 2, gBtnY + btnH / 2, '🔵  LOGIN WITH GOOGLE', {
+            fontFamily: '"Segoe UI", Arial, sans-serif',
+            fontSize: '20px',
+            color: '#ea4335',
+            fontStyle: 'bold',
+        });
+        gLoginText.setOrigin(0.5);
+
+        const gHitZone = this.add.zone(width / 2, gBtnY + btnH / 2, btnW, btnH)
+            .setInteractive({ useHandCursor: true });
+
+        gHitZone.on('pointerover', () => {
+            gBtnBg.clear();
+            gBtnBg.fillStyle(0xdd4b39, 0.4);
+            gBtnBg.fillRoundedRect(btnX, gBtnY, btnW, btnH, 12);
+            gBtnBg.lineStyle(2, 0xea4335, 1);
+            gBtnBg.strokeRoundedRect(btnX, gBtnY, btnW, btnH, 12);
+            gLoginText.setColor('#ffffff');
+        });
+
+        gHitZone.on('pointerout', () => {
+            gBtnBg.clear();
+            gBtnBg.fillStyle(0xdd4b39, 0.2);
+            gBtnBg.fillRoundedRect(btnX, gBtnY, btnW, btnH, 12);
+            gBtnBg.lineStyle(2, 0xdd4b39, 0.6);
+            gBtnBg.strokeRoundedRect(btnX, gBtnY, btnW, btnH, 12);
+            gLoginText.setColor('#ea4335');
+        });
+
+        gHitZone.on('pointerdown', () => {
+            this.showGoogleSignIn();
+        });
+
         // --- Play as Guest button --------------------------------------
-        const guestBtnY = btnY + btnH + 15;
+        const guestBtnY = gBtnY + btnH + 15;
         
         const guestText = this.add.text(width / 2, guestBtnY, 'PLAY AS GUEST', {
             fontFamily: 'monospace',
@@ -255,6 +296,124 @@ export class LoginScene extends Phaser.Scene {
 
     private removeTelegramOverlay(): void {
         const existing = document.getElementById('telegram-login-overlay');
+        if (existing) existing.remove();
+    }
+
+    /* ---------------------------------------------------------------- */
+    /*  Google Sign-In (GSI One Tap / Button)                            */
+    /* ---------------------------------------------------------------- */
+
+    private showGoogleSignIn(): void {
+        const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+        if (!clientId) {
+            console.error('VITE_GOOGLE_CLIENT_ID is not set');
+            return;
+        }
+
+        // Remove any existing overlay
+        this.removeGoogleOverlay();
+
+        // Create overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'google-login-overlay';
+        overlay.style.cssText = `
+            position: fixed; inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 9999;
+        `;
+
+        // Close button
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '✕';
+        closeBtn.style.cssText = `
+            position: absolute; top: 20px; right: 24px;
+            background: none; border: none;
+            color: #aaa; font-size: 32px;
+            cursor: pointer; line-height: 1;
+        `;
+        closeBtn.addEventListener('click', () => this.removeGoogleOverlay());
+        overlay.appendChild(closeBtn);
+
+        // Info text
+        const text = document.createElement('p');
+        text.textContent = 'Войдите через Google';
+        text.style.cssText = `
+            color: #aabbcc; font-family: monospace;
+            font-size: 14px; margin-bottom: 24px;
+        `;
+        overlay.appendChild(text);
+
+        // Google button container
+        const btnContainer = document.createElement('div');
+        btnContainer.id = 'google-signin-button';
+        overlay.appendChild(btnContainer);
+
+        document.body.appendChild(overlay);
+
+        // Load GSI script and render button
+        const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+        if (existingScript) {
+            this.initGoogleButton(clientId);
+        } else {
+            const script = document.createElement('script');
+            script.src = 'https://accounts.google.com/gsi/client';
+            script.async = true;
+            script.onload = () => this.initGoogleButton(clientId);
+            document.head.appendChild(script);
+        }
+    }
+
+    private initGoogleButton(clientId: string): void {
+        const google = (window as any).google;
+        if (!google?.accounts?.id) {
+            console.error('Google Identity Services not loaded');
+            return;
+        }
+
+        google.accounts.id.initialize({
+            client_id: clientId,
+            callback: (response: { credential: string }) => {
+                this.handleGoogleCallback(response.credential);
+            },
+        });
+
+        const btnContainer = document.getElementById('google-signin-button');
+        if (btnContainer) {
+            google.accounts.id.renderButton(btnContainer, {
+                theme: 'filled_black',
+                size: 'large',
+                shape: 'pill',
+                width: 280,
+            });
+        }
+    }
+
+    private async handleGoogleCallback(idToken: string): Promise<void> {
+        this.removeGoogleOverlay();
+
+        try {
+            await authService.loginWithGoogle(idToken);
+            this.cameras.main.fadeOut(500, 0, 0, 0);
+            this.time.delayedCall(500, () => {
+                this.scene.start('BootScene');
+            });
+        } catch (err) {
+            console.error('Google login error:', err);
+            const { width, height } = this.cameras.main;
+            const errText = this.add.text(width / 2, height / 2 + 110, 'Google login failed. Try again.', {
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                color: '#ff4466',
+            });
+            errText.setOrigin(0.5);
+            this.time.delayedCall(3000, () => errText.destroy());
+        }
+    }
+
+    private removeGoogleOverlay(): void {
+        const existing = document.getElementById('google-login-overlay');
         if (existing) existing.remove();
     }
 }
