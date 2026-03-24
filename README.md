@@ -29,6 +29,15 @@ npm run dev
 
 The game will be available at `http://localhost:5173` (or another port if 5173 is in use).
 
+> **⚠️ Important Note for Local Development:**
+> For Telegram and Google Authentication to work correctly, your frontend must be served on an authorized domain (e.g., `https://chalysh.pro`). 
+> You MUST use a tool like `ngrok` or a reverse SSH tunnel to your production server to proxy your local frontend port.
+> 
+> Example SSH Reverse Tunnel command:
+> ```bash
+> ssh -R 8090:localhost:5173 root@chalysh.pro -N
+> ```
+
 ### Production Build
 
 Build the project for production:
@@ -99,6 +108,15 @@ npm run dev
 ```
 
 Игра будет доступна по адресу `http://localhost:5173` (или по другому порту, если 5173 занят).
+
+> **⚠️ Важно для локальной разработки:**
+> Для корректной работы авторизации через Telegram и Google локально ваш фронтенд должен быть доступен по белому домену (например, `https://chalysh.pro`).
+> Необходимо использовать `ngrok` или собственный сервер (с помощью обратного SSH-туннеля) для проксирования локального порта наружу.
+> 
+> Пример команды для обратного SSH-туннеля на ваш сервер:
+> ```bash
+> ssh -R 8090:localhost:5173 root@chalysh.pro -N
+> ```
 
 ### Сборка для продакшена
 
