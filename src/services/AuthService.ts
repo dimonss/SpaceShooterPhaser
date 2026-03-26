@@ -209,6 +209,17 @@ class AuthService {
 
     /* --- profile & fields ----------------------------------------- */
 
+    async getLeaderboard(): Promise<Array<{ username: string | null; firstName: string; bestScore: number }>> {
+        try {
+            const res = await this.authFetch(`${API_BASE}/api/user/leaderboard`);
+            if (!res.ok) return [];
+            const data = await res.json();
+            return (data as { leaderboard: Array<any> }).leaderboard ?? [];
+        } catch {
+            return [];
+        }
+    }
+
     async getProfile(): Promise<AuthUser | null> {
         try {
             const res = await this.authFetch(`${API_BASE}/api/user/me`);

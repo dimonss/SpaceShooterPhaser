@@ -205,6 +205,63 @@ export class MenuScene extends Phaser.Scene {
             });
         });
 
+        // === Inline Leaderboard ===
+        const lbX = width / 2;
+        const lbY = btnY + btnH + 30; // Centered below Play button
+        
+        this.add.text(lbX, lbY, '🏆 TOP 10 PILOTS', {
+            fontFamily: '"Segoe UI", Arial, sans-serif',
+            fontSize: '16px',
+            color: '#ffcc00',
+            fontStyle: 'bold',
+        }).setOrigin(0.5);
+
+        authService.getLeaderboard().then(leaderboard => {
+            if (!this.sys.isActive() || !this.scene.isActive()) return;
+            
+            if (leaderboard.length === 0) {
+                this.add.text(lbX, lbY + 30, 'NO RECORDS', {
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    color: '#556677',
+                }).setOrigin(0.5);
+                return;
+            }
+
+            leaderboard.forEach((user, i) => {
+                const y = lbY + 30 + i * 20;
+                const nameText = user.username || user.firstName || 'UNKNOWN';
+                const scoreText = user.bestScore.toString();
+                
+                let color = '#88aacc';
+                if (i === 0) color = '#ffcc00';
+                else if (i === 1) color = '#eeeeee';
+                else if (i === 2) color = '#dda15e';
+                
+                // Rank + Name (left aligned)
+                this.add.text(lbX - 80, y, `${i + 1}. ${nameText.substring(0, 10)}`, {
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    color: color,
+                }).setOrigin(0, 0.5);
+
+                // Score (right aligned)
+                this.add.text(lbX + 80, y, scoreText, {
+                    fontFamily: 'monospace',
+                    fontSize: '14px',
+                    color: '#ffaa00',
+                    fontStyle: 'bold',
+                }).setOrigin(1, 0.5);
+            });
+        }).catch(() => {
+            if (!this.sys.isActive() || !this.scene.isActive()) return;
+            this.add.text(lbX, lbY + 30, 'ERROR', {
+                fontFamily: 'monospace',
+                fontSize: '14px',
+                color: '#ff4444',
+            }).setOrigin(0.5);
+        });
+
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
         const controlsLines = isTouchDevice
             ? ['🕹  JOYSTICK   MOVE', '🔴  BUTTON   SHOOT']
