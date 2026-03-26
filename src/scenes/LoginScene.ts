@@ -210,12 +210,16 @@ export class LoginScene extends Phaser.Scene {
     /* ---------------------------------------------------------------- */
 
     private showTelegramWidget(): void {
+        this.input.enabled = false;
+        
         // Remove any existing overlay
         this.removeTelegramOverlay();
 
         // Create overlay container
         const overlay = document.createElement('div');
         overlay.id = 'telegram-login-overlay';
+        overlay.addEventListener('pointerdown', e => e.stopPropagation());
+        overlay.addEventListener('click', e => e.stopPropagation());
         overlay.style.cssText = `
             position: fixed; inset: 0;
             background: rgba(0, 0, 0, 0.85);
@@ -295,6 +299,7 @@ export class LoginScene extends Phaser.Scene {
     }
 
     private removeTelegramOverlay(): void {
+        this.input.enabled = true;
         const existing = document.getElementById('telegram-login-overlay');
         if (existing) existing.remove();
     }
@@ -310,12 +315,16 @@ export class LoginScene extends Phaser.Scene {
             return;
         }
 
+        this.input.enabled = false;
+
         // Remove any existing overlay
         this.removeGoogleOverlay();
 
         // Create overlay
         const overlay = document.createElement('div');
         overlay.id = 'google-login-overlay';
+        overlay.addEventListener('pointerdown', e => e.stopPropagation());
+        overlay.addEventListener('click', e => e.stopPropagation());
         overlay.style.cssText = `
             position: fixed; inset: 0;
             background: rgba(0, 0, 0, 0.85);
@@ -413,6 +422,7 @@ export class LoginScene extends Phaser.Scene {
     }
 
     private removeGoogleOverlay(): void {
+        this.input.enabled = true;
         const existing = document.getElementById('google-login-overlay');
         if (existing) existing.remove();
     }
