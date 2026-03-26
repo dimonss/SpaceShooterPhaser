@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { ScoreManager } from '../utils/ScoreManager';
 import { authService } from '../services/AuthService';
 
 export class GameOverScene extends Phaser.Scene {
@@ -13,14 +12,6 @@ export class GameOverScene extends Phaser.Scene {
         const { width, height } = this.cameras.main;
         const finalScore = data.score ?? 0;
         const username = data.username ?? 'PILOT';
-
-        // Check previous offline score before saving
-        const offlineScores = ScoreManager.getTopScores(100);
-        const prevOfflineEntry = offlineScores.find(e => e.username === username);
-        const prevOfflineBest = prevOfflineEntry ? prevOfflineEntry.score : 0;
-
-        // Save the score to localStorage
-        ScoreManager.saveScore(username, finalScore);
 
         // --- Save best score & determine 'New Best' --------------------
         let isNewBest = false;
@@ -39,11 +30,6 @@ export class GameOverScene extends Phaser.Scene {
                 }
             } catch (err) {
                 console.error('Failed to save best score:', err);
-            }
-        } else {
-            // Guest mode check
-            if (finalScore > 0 && finalScore > prevOfflineBest) {
-                isNewBest = true;
             }
         }
 
@@ -172,9 +158,7 @@ export class GameOverScene extends Phaser.Scene {
         }
 
         // === Leaderboard ===
-        const topScores = ScoreManager.getTopScores(5);
-
-        const lbTitle = this.add.text(width / 2, lbStartY, '🏆  TOP SCORES', {
+        const lbTitle = this.add.text(width / 2, lbStartY, '🏆  GLOBAL TOP SCORES', {
             fontFamily: 'monospace',
             fontSize: '13px',
             color: '#6688aa',
@@ -185,24 +169,44 @@ export class GameOverScene extends Phaser.Scene {
 
         const lbEntries: Phaser.GameObjects.Text[] = [lbTitle];
 
-        topScores.forEach((entry, index) => {
-            const isCurrentRun = entry.username === username && entry.score === finalScore;
-            const color = isCurrentRun ? '#ffcc00' : '#88aacc';
-            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+        authService.getLeaderboard().then(topScores => {
+            if (!this.sys.isActive() || !this.scene.isActive()) return;
 
-            const entryText = this.add.text(
-                width / 2,
-                lbStartY + 28 + index * 24,
-                `${medal} ${entry.username.padEnd(12)} ${String(entry.score).padStart(6)}`,
-                {
-                    fontFamily: 'monospace',
-                    fontSize: '14px',
-                    color,
-                }
-            );
-            entryText.setOrigin(0.5);
-            entryText.setAlpha(0);
-            lbEntries.push(entryText);
+            topScores.slice(0, 5).forEach((entry, index) => {
+                const nameText = entry.username || entry.firstName || 'UNKNOWN';
+                const isCurrentRun = nameText.toUpperCase() === username.toUpperCase() && entry.bestScore === finalScore;
+                const color = isCurrentRun ? '#ffcc00' : '#88aacc';
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : '  ';
+
+                const entryText = this.add.text(
+                    width / 2,
+                    lbStartY + 28 + index * 24,
+                    `${medal} ${nameText.substring(0, 11).padEnd(12)} ${String(entry.bestScore).padStart(6)}`,
+                    {
+                        fontFamily: 'monospace',
+                        fontSize: '14px',
+                        color,
+                    }
+                );
+                entryText.setOrigin(0.5);
+                entryText.setAlpha(0);
+                
+                // Animate entry fading in
+                this.tweens.add({
+                    targets: entryText,
+                    alpha: 1,
+                    duration: 500,
+                    ease: 'Power2',
+                });
+            });
+        }).catch(() => {
+            if (!this.sys.isActive() || !this.scene.isActive()) return;
+            const errText = this.add.text(width / 2, lbStartY + 30, 'UNABLE TO FETCH RECORDS', {
+                fontFamily: 'monospace',
+                fontSize: '12px',
+                color: '#ff4444',
+            }).setOrigin(0.5).setAlpha(0);
+            this.tweens.add({ targets: errText, alpha: 1, duration: 500 });
         });
 
         this.tweens.add({
@@ -215,7 +219,7 @@ export class GameOverScene extends Phaser.Scene {
 
         // === Restart button ===
         const btnX = width / 2 - 110;
-        const btnY = lbStartY + 28 + Math.max(topScores.length, 1) * 24 + 20;
+        const btnY = lbStartY + 28 + 5 * 24 + 20;
         const btnW = 220;
         const btnH = 52;
 
