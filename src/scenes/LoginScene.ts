@@ -55,9 +55,10 @@ export class LoginScene extends Phaser.Scene {
         }
 
         // --- Title -----------------------------------------------------
+        const titleFontSize = width < 450 ? '36px' : '52px';
         const title = this.add.text(width / 2, height / 2 - 120, '🚀 SPACE SHOOTER', {
             fontFamily: '"Segoe UI", Arial, sans-serif',
-            fontSize: '52px',
+            fontSize: titleFontSize,
             color: '#00ccff',
             fontStyle: 'bold',
             shadow: {

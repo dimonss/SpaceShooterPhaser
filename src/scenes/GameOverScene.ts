@@ -49,9 +49,10 @@ export class GameOverScene extends Phaser.Scene {
         overlay.fillRect(0, 0, width, height);
 
         // Game Over title
+        const titleFontSize = width < 450 ? '42px' : '56px';
         const title = this.add.text(width / 2, height / 2 - 160, 'GAME OVER', {
             fontFamily: '"Segoe UI", Arial, sans-serif',
-            fontSize: '56px',
+            fontSize: titleFontSize,
             color: '#ff4466',
             fontStyle: 'bold',
             shadow: {
@@ -93,9 +94,10 @@ export class GameOverScene extends Phaser.Scene {
         scoreLabel.setOrigin(0.5);
         scoreLabel.setAlpha(0);
 
+        const scoreFontSize = width < 450 ? '36px' : '48px';
         const scoreText = this.add.text(width / 2, height / 2 - 30, `${finalScore}`, {
             fontFamily: '"Segoe UI", Arial, sans-serif',
-            fontSize: '48px',
+            fontSize: scoreFontSize,
             color: '#ffcc00',
             fontStyle: 'bold',
             shadow: {
