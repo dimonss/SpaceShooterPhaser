@@ -171,27 +171,6 @@ export class LoginScene extends Phaser.Scene {
             this.showGoogleSignIn();
         });
 
-        // --- Play as Guest button --------------------------------------
-        const guestBtnY = gBtnY + btnH + 15;
-        
-        const guestText = this.add.text(width / 2, guestBtnY, 'PLAY AS GUEST', {
-            fontFamily: 'monospace',
-            fontSize: '14px',
-            color: '#6688aa',
-            letterSpacing: 2,
-        });
-        guestText.setOrigin(0.5);
-        guestText.setInteractive({ useHandCursor: true });
-
-        guestText.on('pointerover', () => guestText.setColor('#ffffff'));
-        guestText.on('pointerout', () => guestText.setColor('#6688aa'));
-        guestText.on('pointerdown', () => {
-            this.cameras.main.fadeOut(500, 0, 0, 0);
-            this.time.delayedCall(500, () => {
-                this.scene.start('BootScene');
-            });
-        });
-
         // --- Info text -------------------------------------------------
         const info = this.add.text(width / 2, height - 40, 'Sign in to save your best score globally', {
             fontFamily: 'monospace',
