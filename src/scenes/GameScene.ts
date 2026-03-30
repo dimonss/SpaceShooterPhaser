@@ -310,7 +310,17 @@ export class GameScene extends BaseScene {
         const speedX = Phaser.Math.Between(-40, 40);
         asteroid.setVelocity(speedX, speedY);
         asteroid.setAngularVelocity(Phaser.Math.Between(-120, 120));
-        asteroid.setScale(Phaser.Math.FloatBetween(0.7, 1.4));
+        
+        const scale = Phaser.Math.FloatBetween(0.7, 1.4);
+        asteroid.setScale(scale);
+        
+        if (scale >= 1.1) {
+            asteroid.setData('hp', 3);
+            asteroid.setData('isLarge', true);
+        } else {
+            asteroid.setData('hp', 1);
+            asteroid.setData('isLarge', false);
+        }
     }
 
     private spawnPowerup(): void {
@@ -343,6 +353,28 @@ export class GameScene extends BaseScene {
         bullet.setVisible(false);
         (bullet.body as Phaser.Physics.Arcade.Body).stop();
 
+        let hp = asteroid.getData('hp') as number;
+        hp = (hp || 1) - 1;
+        
+        if (hp > 0) {
+            asteroid.setData('hp', hp);
+            
+            // Visual hit feedback
+            this.tweens.add({
+                targets: asteroid,
+                alpha: 0.5,
+                duration: 50,
+                yoyo: true,
+                onComplete: () => { asteroid.setAlpha(1); }
+            });
+            return;
+        }
+
+        const isLarge = asteroid.getData('isLarge') as boolean;
+        if (isLarge) {
+            this.spawnSmallAsteroids(asteroid.x, asteroid.y);
+        }
+
         // Explosion
         this.createExplosion(asteroid.x, asteroid.y);
 
@@ -369,6 +401,23 @@ export class GameScene extends BaseScene {
             ease: 'Power2',
             onComplete: () => pop.destroy(),
         });
+    }
+
+    private spawnSmallAsteroids(x: number, y: number): void {
+        for (let i = 0; i < 2; i++) {
+            const variant = Phaser.Math.Between(0, 2);
+            const asteroid = this.asteroids.create(x, y, `asteroid${variant}`) as Phaser.Physics.Arcade.Image;
+
+            if (!asteroid) continue;
+
+            const speedY = Phaser.Math.Between(80, 150) * this.difficulty;
+            const speedX = i === 0 ? Phaser.Math.Between(-120, -40) : Phaser.Math.Between(40, 120);
+            asteroid.setVelocity(speedX, speedY);
+            asteroid.setAngularVelocity(Phaser.Math.Between(-200, 200));
+            asteroid.setScale(Phaser.Math.FloatBetween(0.5, 0.8));
+            asteroid.setData('hp', 1);
+            asteroid.setData('isLarge', false);
+        }
     }
 
     private playerHitAsteroid(
