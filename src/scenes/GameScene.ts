@@ -269,6 +269,7 @@ export class GameScene extends BaseScene {
                 b.setActive(false);
                 b.setVisible(false);
                 (b.body as Phaser.Physics.Arcade.Body).stop();
+                (b.body as Phaser.Physics.Arcade.Body).enable = false;
             }
         });
 
@@ -293,6 +294,7 @@ export class GameScene extends BaseScene {
         bullet.setVisible(true);
         bullet.setScale(1);
         (bullet.body as Phaser.Physics.Arcade.Body).reset(this.player.x, this.player.y - 20);
+        (bullet.body as Phaser.Physics.Arcade.Body).enable = true;
         bullet.setVelocityY(-500);
         bullet.setBlendMode(Phaser.BlendModes.ADD);
         bullet.setDepth(8);
@@ -315,7 +317,7 @@ export class GameScene extends BaseScene {
         asteroid.setScale(scale);
         
         if (scale >= 1.1) {
-            asteroid.setData('hp', 3);
+            asteroid.setData('hp', 1);
             asteroid.setData('isLarge', true);
         } else {
             asteroid.setData('hp', 1);
@@ -349,9 +351,12 @@ export class GameScene extends BaseScene {
         const bullet = bulletObj as Phaser.Physics.Arcade.Image;
         const asteroid = asteroidObj as Phaser.Physics.Arcade.Image;
 
+        if (!bullet.active || !asteroid.active) return;
+
         bullet.setActive(false);
         bullet.setVisible(false);
         (bullet.body as Phaser.Physics.Arcade.Body).stop();
+        (bullet.body as Phaser.Physics.Arcade.Body).enable = false;
 
         let hp = asteroid.getData('hp') as number;
         hp = (hp || 1) - 1;
@@ -427,6 +432,8 @@ export class GameScene extends BaseScene {
         if (this.isInvulnerable || this.isGameOver) return;
 
         const asteroid = asteroidObj as Phaser.Physics.Arcade.Image;
+        if (!asteroid.active) return;
+
         this.createExplosion(asteroid.x, asteroid.y);
         asteroid.destroy();
 
