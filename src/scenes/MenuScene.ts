@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { authService } from '../services/AuthService';
+import { BaseScene } from './BaseScene';
 
-export class MenuScene extends Phaser.Scene {
+export class MenuScene extends BaseScene {
     private stars: Phaser.GameObjects.Image[] = [];
     private bestScore = 0;
 
@@ -9,17 +10,37 @@ export class MenuScene extends Phaser.Scene {
         super({ key: 'MenuScene' });
     }
 
-    async create(): Promise<void> {
+    create(): void {
         const { width, height } = this.cameras.main;
 
-        // Load best score from backend
-        try {
-            const fields = await authService.getFields();
-            const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
-            this.bestScore = gameData?.bestScore ?? 0;
-        } catch {
-            this.bestScore = 0;
-        }
+        // --- Best score (top-right corner) ---
+        // Create the text object initially hidden. We'll show it when the score loads.
+        const bestText = this.add.text(width - 20, 16, '', {
+            fontFamily: 'monospace',
+            fontSize: '16px',
+            color: '#ffcc00',
+            shadow: { offsetX: 0, offsetY: 0, color: '#ffcc00', blur: 8, fill: true },
+        });
+        bestText.setOrigin(1, 0);
+        bestText.setDepth(20);
+        bestText.setVisible(false);
+
+        // Load best score from backend asynchronously
+        authService.getFields()
+            .then((fields) => {
+                if (!this.scene.isActive('MenuScene')) return;
+                const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
+                this.bestScore = gameData?.bestScore ?? 0;
+                
+                if (this.bestScore > 0) {
+                    bestText.setText(`🏆 BEST: ${this.bestScore}`);
+                    bestText.setVisible(true);
+                }
+            })
+            .catch((err) => {
+                console.warn('[MenuScene] Failed to load best score:', err);
+                this.bestScore = 0;
+            });
 
         // Starfield background
         for (let i = 0; i < 100; i++) {
@@ -53,17 +74,7 @@ export class MenuScene extends Phaser.Scene {
             userText.setDepth(20);
         }
 
-        // --- Best score (top-right corner) ---
-        if (this.bestScore > 0) {
-            const bestText = this.add.text(width - 20, 16, `🏆 BEST: ${this.bestScore}`, {
-                fontFamily: 'monospace',
-                fontSize: '16px',
-                color: '#ffcc00',
-                shadow: { offsetX: 0, offsetY: 0, color: '#ffcc00', blur: 8, fill: true },
-            });
-            bestText.setOrigin(1, 0);
-            bestText.setDepth(20);
-        }
+        // (Best score rendering was moved to the top of create() to handle async updates)
 
         // Title
         const titleFontSize = width < 450 ? '36px' : '52px';
@@ -156,7 +167,9 @@ export class MenuScene extends Phaser.Scene {
 
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
-                this.scene.start('GameScene');
+                this.launchScene('GameScene', () =>
+                    import('./GameScene').then((m) => m.GameScene),
+                );
             });
         });
 

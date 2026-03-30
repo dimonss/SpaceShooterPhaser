@@ -1,6 +1,6 @@
-import Phaser from 'phaser';
+import { BaseScene } from './BaseScene';
 
-export class BootScene extends Phaser.Scene {
+export class BootScene extends BaseScene {
     constructor() {
         super({ key: 'BootScene' });
     }
@@ -39,7 +39,9 @@ export class BootScene extends Phaser.Scene {
     }
 
     create(): void {
-        this.scene.start('MenuScene');
+        this.launchScene('MenuScene', () =>
+            import('./MenuScene').then((m) => m.MenuScene),
+        );
     }
 
     private generateTextures(): void {

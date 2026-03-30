@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { MobileControls } from '../utils/MobileControls';
+import { BaseScene } from './BaseScene';
 
-export class GameScene extends Phaser.Scene {
+export class GameScene extends BaseScene {
     private player!: Phaser.Physics.Arcade.Image;
     private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
     private spaceKey!: Phaser.Input.Keyboard.Key;
@@ -507,7 +508,11 @@ export class GameScene extends Phaser.Scene {
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
                 const username = this.registry.get('username') || 'PILOT';
-                this.scene.start('GameOverScene', { score: this.score, username });
+                this.launchScene(
+                    'GameOverScene',
+                    () => import('./GameOverScene').then((m) => m.GameOverScene),
+                    { score: this.score, username },
+                );
             });
         });
     }

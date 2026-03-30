@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { authService, type TelegramLoginData } from '../services/AuthService';
+import { BaseScene } from './BaseScene';
 
 /**
  * LoginScene — shown before the game menu if the user is not authenticated.
@@ -7,14 +8,14 @@ import { authService, type TelegramLoginData } from '../services/AuthService';
  * Displays a "Login with Telegram" button that opens the Telegram Login Widget
  * as an HTML overlay on top of the game canvas.
  */
-export class LoginScene extends Phaser.Scene {
+export class LoginScene extends BaseScene {
     private stars: Phaser.GameObjects.Image[] = [];
 
     constructor() {
         super({ key: 'LoginScene' });
     }
 
-    async create(): Promise<void> {
+    create(): void {
         const { width, height } = this.cameras.main;
 
         // Generate star texture if it doesn't exist yet (LoginScene runs before BootScene)
@@ -26,13 +27,23 @@ export class LoginScene extends Phaser.Scene {
             gfx.destroy();
         }
 
-        // --- Try to restore existing session ---------------------------
+        // --- Try to restore existing session (non-blocking) ------------
+        // UI is built immediately below; if session is valid we silently
+        // transition to BootScene before the user interacts.
         if (authService.isLoggedIn()) {
-            const restored = await authService.tryRestoreSession();
-            if (restored) {
-                this.scene.start('BootScene');
-                return;
-            }
+            authService
+                .tryRestoreSession()
+                .then((restored) => {
+                    if (restored && this.scene.isActive('LoginScene')) {
+                        this.launchScene('BootScene', () =>
+                            import('./BootScene').then((m) => m.BootScene),
+                        );
+                    }
+                })
+                .catch((err: unknown) => {
+                    console.warn('[LoginScene] Session restore failed:', err);
+                    // Login UI is already visible — user can log in manually
+                });
         }
 
         // --- Starfield -------------------------------------------------
@@ -262,11 +273,12 @@ export class LoginScene extends Phaser.Scene {
             await authService.loginWithTelegram(data);
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
-                this.scene.start('BootScene');
+                this.launchScene('BootScene', () =>
+                    import('./BootScene').then((m) => m.BootScene),
+                );
             });
         } catch (err) {
             console.error('Telegram login error:', err);
-            // Show error in-scene
             const { width, height } = this.cameras.main;
             const errText = this.add.text(width / 2, height / 2 + 110, 'Login failed. Try again.', {
                 fontFamily: 'monospace',
@@ -386,7 +398,9 @@ export class LoginScene extends Phaser.Scene {
             await authService.loginWithGoogle(idToken);
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
-                this.scene.start('BootScene');
+                this.launchScene('BootScene', () =>
+                    import('./BootScene').then((m) => m.BootScene),
+                );
             });
         } catch (err) {
             console.error('Google login error:', err);

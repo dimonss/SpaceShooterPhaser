@@ -1,36 +1,39 @@
 import Phaser from 'phaser';
 import { authService } from '../services/AuthService';
+import { BaseScene } from './BaseScene';
 
-export class GameOverScene extends Phaser.Scene {
+export class GameOverScene extends BaseScene {
     private stars: Phaser.GameObjects.Image[] = [];
 
     constructor() {
         super({ key: 'GameOverScene' });
     }
 
-    async create(data: { score: number; username?: string }): Promise<void> {
+    private bestBadge!: Phaser.GameObjects.Text;
+
+    create(data: { score: number; username?: string }): void {
         const { width, height } = this.cameras.main;
         const finalScore = data.score ?? 0;
         const username = data.username ?? 'PILOT';
 
-        // --- Save best score & determine 'New Best' --------------------
-        let isNewBest = false;
-        
+        // --- Save best score & determine 'New Best' (Background) -------
         if (authService.isLoggedIn()) {
-            try {
-                const fields = await authService.getFields();
+            authService.getFields().then((fields) => {
                 const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
                 const prevBest = gameData?.bestScore ?? 0;
 
                 if (finalScore > prevBest) {
-                    isNewBest = true;
-                    await authService.updateFields({
+                    authService.updateFields({
                         spaceShooterGame: { bestScore: finalScore },
-                    });
+                    }).catch((err) => console.error('Failed to save best score:', err));
+
+                    if (this.scene.isActive('GameOverScene') && this.bestBadge) {
+                        this.showNewBestBadge();
+                    }
                 }
-            } catch (err) {
-                console.error('Failed to save best score:', err);
-            }
+            }).catch((err) => {
+                console.error('Failed to fetch/save best score:', err);
+            });
         }
 
         // Starfield
@@ -119,45 +122,21 @@ export class GameOverScene extends Phaser.Scene {
             ease: 'Power2',
         });
 
-        let lbStartY = height / 2 + 20;
+        let lbStartY = height / 2 + 65; // Fixed position to always leave room for the badge
 
-        // --- NEW BEST badge -------------------------------------------
-        if (isNewBest) {
-            const bestBadge = this.add.text(width / 2, lbStartY + 10, '⭐ NEW BEST! ⭐', {
-                fontFamily: '"Segoe UI", Arial, sans-serif',
-                fontSize: '22px',
-                color: '#ffaa00',
-                fontStyle: 'bold',
-                shadow: {
-                    offsetX: 0, offsetY: 0,
-                    color: '#ffaa00', blur: 15, fill: true,
-                },
-            });
-            bestBadge.setOrigin(0.5);
-            bestBadge.setAlpha(0);
-
-            this.tweens.add({
-                targets: bestBadge,
-                alpha: 1,
-                scale: { from: 0.5, to: 1 },
-                duration: 600,
-                delay: 700,
-                ease: 'Back.easeOut',
-            });
-
-            // Pulsing glow on badge
-            this.tweens.add({
-                targets: bestBadge,
-                alpha: 0.7,
-                duration: 800,
-                yoyo: true,
-                repeat: -1,
-                delay: 1300,
-                ease: 'Sine.easeInOut',
-            });
-
-            lbStartY += 45; // Shift leaderboard down
-        }
+        // --- NEW BEST badge (Initially Hidden) ------------------------
+        this.bestBadge = this.add.text(width / 2, height / 2 + 15, '⭐ NEW BEST! ⭐', {
+            fontFamily: '"Segoe UI", Arial, sans-serif',
+            fontSize: '22px',
+            color: '#ffaa00',
+            fontStyle: 'bold',
+            shadow: {
+                offsetX: 0, offsetY: 0,
+                color: '#ffaa00', blur: 15, fill: true,
+            },
+        });
+        this.bestBadge.setOrigin(0.5);
+        this.bestBadge.setAlpha(0);
 
         // === Leaderboard ===
         const lbTitle = this.add.text(width / 2, lbStartY, '🏆  GLOBAL TOP SCORES', {
@@ -273,7 +252,9 @@ export class GameOverScene extends Phaser.Scene {
         hitZone.on('pointerdown', () => {
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
-                this.scene.start('GameScene');
+                this.launchScene('GameScene', () =>
+                    import('./GameScene').then((m) => m.GameScene),
+                );
             });
         });
 
@@ -300,11 +281,33 @@ export class GameOverScene extends Phaser.Scene {
         menuText.on('pointerdown', () => {
             this.cameras.main.fadeOut(500, 0, 0, 0);
             this.time.delayedCall(500, () => {
-                this.scene.start('MenuScene');
+                this.launchScene('MenuScene', () =>
+                    import('./MenuScene').then((m) => m.MenuScene),
+                );
             });
         });
 
         // Fade in
         this.cameras.main.fadeIn(500, 0, 0, 0);
+    }
+
+    private showNewBestBadge(): void {
+        this.tweens.add({
+            targets: this.bestBadge,
+            alpha: 1,
+            scale: { from: 0.5, to: 1 },
+            duration: 600,
+            ease: 'Back.easeOut',
+        });
+
+        this.tweens.add({
+            targets: this.bestBadge,
+            alpha: 0.7,
+            duration: 800,
+            yoyo: true,
+            repeat: -1,
+            delay: 600,
+            ease: 'Sine.easeInOut',
+        });
     }
 }
