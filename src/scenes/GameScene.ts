@@ -131,7 +131,7 @@ export class GameScene extends BaseScene {
 
         // Bullet restore timer
         this.time.addEvent({
-            delay: 1000,
+            delay: 500,
             callback: () => {
                 if (this.isGameOver) return;
                 if (this.currentBullets < this.maxBullets) {
