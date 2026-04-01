@@ -11,8 +11,11 @@ export class GameScene extends BaseScene {
     private powerups!: Phaser.Physics.Arcade.Group;
     private scoreText!: Phaser.GameObjects.Text;
     private livesText!: Phaser.GameObjects.Text;
+    private bulletsText!: Phaser.GameObjects.Text;
     private score = 0;
     private lives = 3;
+    private maxBullets = 10;
+    private currentBullets = 10;
     private lastFired = 0;
     private fireRate = 180;
     private asteroidTimer!: Phaser.Time.TimerEvent;
@@ -39,6 +42,7 @@ export class GameScene extends BaseScene {
         const { width, height } = this.cameras.main;
         this.score = 0;
         this.lives = 3;
+        this.currentBullets = this.maxBullets;
         this.difficulty = 1;
         this.isInvulnerable = false;
         this.isGameOver = false;
@@ -109,10 +113,32 @@ export class GameScene extends BaseScene {
         this.livesText.setOrigin(1, 0);
         this.livesText.setDepth(20);
 
+        this.bulletsText = this.add.text(20, 44, `BULLETS: ${this.currentBullets}/${this.maxBullets}`, {
+            fontFamily: 'monospace',
+            fontSize: '18px',
+            color: '#ffff00',
+            shadow: { offsetX: 0, offsetY: 0, color: '#ffff00', blur: 10, fill: true },
+        });
+        this.bulletsText.setDepth(20);
+
         // === Spawn timers ===
         this.asteroidTimer = this.time.addEvent({
             delay: 800,
             callback: this.spawnAsteroid,
+            callbackScope: this,
+            loop: true,
+        });
+
+        // Bullet restore timer
+        this.time.addEvent({
+            delay: 1000,
+            callback: () => {
+                if (this.isGameOver) return;
+                if (this.currentBullets < this.maxBullets) {
+                    this.currentBullets++;
+                    this.updateBulletsDisplay();
+                }
+            },
             callbackScope: this,
             loop: true,
         });
@@ -248,8 +274,12 @@ export class GameScene extends BaseScene {
         // === Shooting (keyboard + touch) ===
         const wantFire = this.spaceKey.isDown || touch.fire;
         if (wantFire && time > this.lastFired + this.fireRate) {
-            this.fireBullet();
-            this.lastFired = time;
+            if (this.currentBullets > 0) {
+                this.currentBullets--;
+                this.updateBulletsDisplay();
+                this.fireBullet();
+                this.lastFired = time;
+            }
         }
 
         // === Scrolling stars ===
@@ -522,6 +552,10 @@ export class GameScene extends BaseScene {
     private updateLivesDisplay(): void {
         const hearts = Array(this.lives).fill('❤️').join(' ');
         this.livesText.setText(hearts);
+    }
+
+    private updateBulletsDisplay(): void {
+        this.bulletsText.setText(`BULLETS: ${this.currentBullets}/${this.maxBullets}`);
     }
 
     private togglePause(): void {
