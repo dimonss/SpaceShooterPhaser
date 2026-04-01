@@ -18,22 +18,24 @@ export class GameOverScene extends BaseScene {
 
         // --- Save best score & determine 'New Best' (Background) -------
         if (authService.isLoggedIn()) {
-            authService.getFields().then((fields) => {
-                const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
-                const prevBest = gameData?.bestScore ?? 0;
+            authService.getFields()
+                .then(async (fields) => {
+                    const gameData = fields.spaceShooterGame as { bestScore?: number } | undefined;
+                    const prevBest = gameData?.bestScore ?? 0;
 
-                if (finalScore > prevBest) {
-                    authService.updateFields({
+                    if (finalScore <= prevBest) return;
+
+                    await authService.updateFields({
                         spaceShooterGame: { bestScore: finalScore },
-                    }).catch((err) => console.error('Failed to save best score:', err));
+                    });
 
                     if (this.scene.isActive('GameOverScene') && this.bestBadge) {
                         this.showNewBestBadge();
                     }
-                }
-            }).catch((err) => {
-                console.error('Failed to fetch/save best score:', err);
-            });
+                })
+                .catch((err) => {
+                    console.error('Failed to fetch/save best score:', err);
+                });
         }
 
         // Starfield

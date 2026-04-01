@@ -245,10 +245,14 @@ class AuthService {
     }
 
     async updateFields(fields: Record<string, unknown>): Promise<void> {
-        await this.authFetch(`${API_BASE}/api/user/me/fields`, {
+        const res = await this.authFetch(`${API_BASE}/api/user/me/fields`, {
             method: 'PATCH',
             body: JSON.stringify(fields),
         });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error((err as { message?: string }).message || 'Failed to update fields');
+        }
     }
 
     /**

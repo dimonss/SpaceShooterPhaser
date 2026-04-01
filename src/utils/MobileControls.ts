@@ -23,6 +23,11 @@ export class MobileControls {
     private baseX = 0;
     private baseY = 0;
     private maxRadius = 50;
+    private joystickStartHandler?: (e: TouchEvent) => void;
+    private joystickMoveHandler?: (e: TouchEvent) => void;
+    private joystickEndHandler?: (e: TouchEvent) => void;
+    private fireStartHandler?: (e: TouchEvent) => void;
+    private fireEndHandler?: (e: TouchEvent) => void;
 
     public readonly isTouchDevice: boolean;
 
@@ -120,7 +125,7 @@ export class MobileControls {
 
     private bindEvents(): void {
         // ----- Joystick -----
-        this.joystickBase.addEventListener('touchstart', (e: TouchEvent) => {
+        this.joystickStartHandler = (e: TouchEvent) => {
             e.preventDefault();
             const touch = e.changedTouches[0];
             this.joystickActive = true;
@@ -129,9 +134,10 @@ export class MobileControls {
             this.baseX = rect.left + rect.width / 2;
             this.baseY = rect.top + rect.height / 2;
             this.handleJoystickMove(touch.clientX, touch.clientY);
-        }, { passive: false });
+        };
+        this.joystickBase.addEventListener('touchstart', this.joystickStartHandler, { passive: false });
 
-        document.addEventListener('touchmove', (e: TouchEvent) => {
+        this.joystickMoveHandler = (e: TouchEvent) => {
             if (!this.joystickActive) return;
             for (let i = 0; i < e.changedTouches.length; i++) {
                 const touch = e.changedTouches[i];
@@ -141,9 +147,10 @@ export class MobileControls {
                     break;
                 }
             }
-        }, { passive: false });
+        };
+        document.addEventListener('touchmove', this.joystickMoveHandler, { passive: false });
 
-        const endJoystick = (e: TouchEvent) => {
+        this.joystickEndHandler = (e: TouchEvent) => {
             for (let i = 0; i < e.changedTouches.length; i++) {
                 if (e.changedTouches[i].identifier === this.joystickPointerId) {
                     this.joystickActive = false;
@@ -155,18 +162,19 @@ export class MobileControls {
                 }
             }
         };
-        document.addEventListener('touchend', endJoystick);
-        document.addEventListener('touchcancel', endJoystick);
+        document.addEventListener('touchend', this.joystickEndHandler);
+        document.addEventListener('touchcancel', this.joystickEndHandler);
 
         // ----- Fire Button -----
-        this.fireBtn.addEventListener('touchstart', (e: TouchEvent) => {
+        this.fireStartHandler = (e: TouchEvent) => {
             e.preventDefault();
             this.inputState.fire = true;
             this.fireBtn.style.background = 'radial-gradient(circle, rgba(255,100,100,0.7) 0%, rgba(255,50,50,0.3) 100%)';
             this.fireBtn.style.transform = 'scale(0.92)';
-        }, { passive: false });
+        };
+        this.fireBtn.addEventListener('touchstart', this.fireStartHandler, { passive: false });
 
-        const endFire = (e: TouchEvent) => {
+        this.fireEndHandler = (e: TouchEvent) => {
             // Only release if none of the remaining touches are on the fire button
             let stillOnBtn = false;
             for (let i = 0; i < e.touches.length; i++) {
@@ -184,8 +192,8 @@ export class MobileControls {
                 this.fireBtn.style.transform = 'scale(1)';
             }
         };
-        this.fireBtn.addEventListener('touchend', endFire, { passive: false });
-        this.fireBtn.addEventListener('touchcancel', endFire, { passive: false });
+        this.fireBtn.addEventListener('touchend', this.fireEndHandler, { passive: false });
+        this.fireBtn.addEventListener('touchcancel', this.fireEndHandler, { passive: false });
     }
 
     private handleJoystickMove(clientX: number, clientY: number): void {
@@ -208,6 +216,28 @@ export class MobileControls {
     }
 
     destroy(): void {
+        if (this.joystickStartHandler) {
+            this.joystickBase.removeEventListener('touchstart', this.joystickStartHandler);
+        }
+        if (this.joystickMoveHandler) {
+            document.removeEventListener('touchmove', this.joystickMoveHandler);
+        }
+        if (this.joystickEndHandler) {
+            document.removeEventListener('touchend', this.joystickEndHandler);
+            document.removeEventListener('touchcancel', this.joystickEndHandler);
+        }
+        if (this.fireStartHandler) {
+            this.fireBtn.removeEventListener('touchstart', this.fireStartHandler);
+        }
+        if (this.fireEndHandler) {
+            this.fireBtn.removeEventListener('touchend', this.fireEndHandler);
+            this.fireBtn.removeEventListener('touchcancel', this.fireEndHandler);
+        }
+
+        this.inputState = { x: 0, y: 0, fire: false };
+        this.joystickActive = false;
+        this.joystickPointerId = null;
+
         if (this.container && this.container.parentNode) {
             this.container.parentNode.removeChild(this.container);
         }

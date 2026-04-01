@@ -331,6 +331,13 @@ export class GameScene extends BaseScene {
                 a.destroy();
             }
         });
+
+        this.powerups.getChildren().forEach((powerup) => {
+            const p = powerup as Phaser.Physics.Arcade.Image;
+            if (p.active && p.y > this.cameras.main.height + 60) {
+                p.destroy();
+            }
+        });
     }
 
     private fireBullet(): void {
@@ -522,7 +529,7 @@ export class GameScene extends BaseScene {
         const powerup = powerupObj as Phaser.Physics.Arcade.Image;
         powerup.destroy();
 
-        // Restore a life (max 5)
+        // Restore a life (max 3)
         if (this.lives < 3) {
             this.lives++;
             this.updateLivesDisplay();
