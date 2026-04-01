@@ -11,7 +11,13 @@ export class GameScene extends BaseScene {
     private powerups!: Phaser.Physics.Arcade.Group;
     private scoreText!: Phaser.GameObjects.Text;
     private livesText!: Phaser.GameObjects.Text;
-    private bulletsText!: Phaser.GameObjects.Text;
+    private ammoLabel!: Phaser.GameObjects.Text;
+    private ammoBarBg!: Phaser.GameObjects.Rectangle;
+    private ammoBarGlow!: Phaser.GameObjects.Rectangle;
+    private ammoBarFill!: Phaser.GameObjects.Rectangle;
+    private ammoBarTween?: Phaser.Tweens.Tween;
+    private ammoPulseTween?: Phaser.Tweens.Tween;
+    private lowAmmoTween?: Phaser.Tweens.Tween;
     private score = 0;
     private lives = 3;
     private maxBullets = 10;
@@ -33,6 +39,7 @@ export class GameScene extends BaseScene {
     private pauseOverlay!: Phaser.GameObjects.Rectangle;
     private pauseText!: Phaser.GameObjects.Text;
     private pauseBtn!: Phaser.GameObjects.Text;
+    private readonly ammoBarWidth = 180;
 
     constructor() {
         super({ key: 'GameScene' });
@@ -113,13 +120,28 @@ export class GameScene extends BaseScene {
         this.livesText.setOrigin(1, 0);
         this.livesText.setDepth(20);
 
-        this.bulletsText = this.add.text(20, 44, `BULLETS: ${this.currentBullets}/${this.maxBullets}`, {
+        this.ammoLabel = this.add.text(20, 44, 'AMMO', {
             fontFamily: 'monospace',
-            fontSize: '18px',
-            color: '#ffff00',
-            shadow: { offsetX: 0, offsetY: 0, color: '#ffff00', blur: 10, fill: true },
+            fontSize: '16px',
+            color: '#8cefff',
+            shadow: { offsetX: 0, offsetY: 0, color: '#00c8ff', blur: 8, fill: true },
         });
-        this.bulletsText.setDepth(20);
+        this.ammoLabel.setDepth(20);
+
+        this.ammoBarBg = this.add.rectangle(20, 70, this.ammoBarWidth, 14, 0x001018, 0.9);
+        this.ammoBarBg.setOrigin(0, 0.5);
+        this.ammoBarBg.setStrokeStyle(2, 0x2a4f66, 1);
+        this.ammoBarBg.setDepth(20);
+
+        this.ammoBarGlow = this.add.rectangle(20, 70, this.ammoBarWidth, 14, 0x00e5ff, 0.25);
+        this.ammoBarGlow.setOrigin(0, 0.5);
+        this.ammoBarGlow.setDepth(21);
+
+        this.ammoBarFill = this.add.rectangle(20, 70, this.ammoBarWidth, 14, 0x00e5ff, 1);
+        this.ammoBarFill.setOrigin(0, 0.5);
+        this.ammoBarFill.setDepth(22);
+
+        this.updateBulletsDisplay(true);
 
         // === Spawn timers ===
         this.asteroidTimer = this.time.addEvent({
@@ -554,8 +576,80 @@ export class GameScene extends BaseScene {
         this.livesText.setText(hearts);
     }
 
-    private updateBulletsDisplay(): void {
-        this.bulletsText.setText(`BULLETS: ${this.currentBullets}/${this.maxBullets}`);
+    private updateBulletsDisplay(instant = false): void {
+        const ratio = Phaser.Math.Clamp(this.currentBullets / this.maxBullets, 0, 1);
+        const fillWidth = Math.max(0, this.ammoBarWidth * ratio);
+
+        let barColor = 0x00e5ff;
+        if (ratio <= 0.3) {
+            barColor = 0xff4d57;
+        } else if (ratio <= 0.6) {
+            barColor = 0xffc247;
+        }
+
+        if (this.ammoBarTween) {
+            this.ammoBarTween.stop();
+            this.ammoBarTween = undefined;
+        }
+
+        if (instant) {
+            this.ammoBarFill.width = fillWidth;
+            this.ammoBarGlow.width = fillWidth;
+        } else {
+            const tweenState = { width: this.ammoBarFill.width };
+            this.ammoBarTween = this.tweens.add({
+                targets: tweenState,
+                width: fillWidth,
+                duration: 220,
+                ease: 'Sine.easeOut',
+                onUpdate: () => {
+                    this.ammoBarFill.width = tweenState.width;
+                    this.ammoBarGlow.width = tweenState.width;
+                },
+            });
+        }
+
+        this.ammoBarFill.setFillStyle(barColor, 1);
+        this.ammoBarGlow.setFillStyle(barColor, 0.3);
+
+        if (this.ammoPulseTween) {
+            this.ammoPulseTween.stop();
+            this.ammoPulseTween = undefined;
+        }
+        this.ammoBarFill.setScale(1, 1);
+        this.ammoBarGlow.setScale(1, 1);
+        this.ammoPulseTween = this.tweens.add({
+            targets: [this.ammoBarFill, this.ammoBarGlow],
+            scaleY: 1.18,
+            duration: 80,
+            yoyo: true,
+            ease: 'Sine.easeOut',
+        });
+
+        if (ratio <= 0.3 && ratio > 0) {
+            if (!this.lowAmmoTween || !this.lowAmmoTween.isPlaying()) {
+                this.lowAmmoTween = this.tweens.add({
+                    targets: this.ammoBarGlow,
+                    alpha: { from: 0.2, to: 0.7 },
+                    duration: 350,
+                    yoyo: true,
+                    repeat: -1,
+                    ease: 'Sine.easeInOut',
+                });
+            }
+        } else if (this.lowAmmoTween) {
+            this.lowAmmoTween.stop();
+            this.lowAmmoTween = undefined;
+            this.ammoBarGlow.setAlpha(0.3);
+        }
+
+        if (ratio === 0) {
+            this.ammoLabel.setText('AMMO RECHARGING');
+            this.ammoLabel.setColor('#ff7d85');
+        } else {
+            this.ammoLabel.setText('AMMO');
+            this.ammoLabel.setColor('#8cefff');
+        }
     }
 
     private togglePause(): void {
