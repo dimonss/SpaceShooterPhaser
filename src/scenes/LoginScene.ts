@@ -258,7 +258,7 @@ export class LoginScene extends BaseScene {
         const script = document.createElement('script');
         script.async = true;
         script.src = 'https://telegram.org/js/telegram-widget.js?22';
-        script.setAttribute('data-telegram-login', 'ChalyshAuthBot');
+        script.setAttribute('data-telegram-login', import.meta.env.VITE_TELEGRAM_BOT_NAME || '');
         script.setAttribute('data-size', 'large');
         script.setAttribute('data-radius', '8');
         script.setAttribute('data-onauth', '__onTelegramAuth(user)');
