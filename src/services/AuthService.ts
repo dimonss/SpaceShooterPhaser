@@ -43,8 +43,8 @@ export interface TelegramLoginData {
 /* ------------------------------------------------------------------ */
 
 const KEYS = {
-    ACCESS: 'chalysh_access_token',
-    REFRESH: 'chalysh_refresh_token',
+    ACCESS: 'accessToken',
+    REFRESH: 'refreshToken',
     USER: 'chalysh_user',
 } as const;
 
@@ -95,7 +95,7 @@ class AuthService {
     /* --- state ---------------------------------------------------- */
 
     isLoggedIn(): boolean {
-        return !!getAccessToken() && !!this.user;
+        return !!getAccessToken();
     }
 
     getUser(): AuthUser | null {
