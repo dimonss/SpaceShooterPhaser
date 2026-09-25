@@ -64,15 +64,40 @@ export class MenuScene extends BaseScene {
 
         // --- User info (top-left corner) ---
         const user = authService.getUser();
+        const provider = authService.getActiveProvider();
+        const available = authService.getAvailableProviders();
+
         if (user) {
+            const providerIcon = provider === 'google' ? '🔵' : '✈️';
             const displayName = user.firstName + (user.lastName ? ` ${user.lastName}` : '');
-            const userText = this.add.text(20, 16, `👤 ${displayName}`, {
+            const userText = this.add.text(20, 16, `👤 ${displayName} (${providerIcon} ${provider})`, {
                 fontFamily: '"Segoe UI", Arial, sans-serif',
-                fontSize: '16px',
+                fontSize: '15px',
                 color: '#88aacc',
             });
             userText.setDepth(20);
+
+            if (available.length > 1) {
+                const nextProvider = provider === 'google' ? 'telegram' : 'google';
+                const nextLabel = provider === 'google' ? '✈️ Switch to TG' : '🔵 Switch to Google';
+                const switchBtn = this.add.text(20, 40, `🔄 ${nextLabel}`, {
+                    fontFamily: 'monospace',
+                    fontSize: '12px',
+                    color: '#55ccff',
+                    backgroundColor: 'rgba(0, 50, 100, 0.5)',
+                    padding: { x: 6, y: 3 },
+                });
+                switchBtn.setDepth(20);
+                switchBtn.setInteractive({ useHandCursor: true });
+                switchBtn.on('pointerover', () => switchBtn.setColor('#ffffff'));
+                switchBtn.on('pointerout', () => switchBtn.setColor('#55ccff'));
+                switchBtn.on('pointerdown', async () => {
+                    await authService.switchProvider(nextProvider);
+                    this.scene.restart();
+                });
+            }
         }
+
 
         // (Best score rendering was moved to the top of create() to handle async updates)
 
