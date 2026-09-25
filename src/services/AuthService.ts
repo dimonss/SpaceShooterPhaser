@@ -91,19 +91,32 @@ function saveTokens(access: string, refresh: string, provider?: AuthProviderType
     localStorage.setItem(APP_PROVIDER_KEY, target);
 }
 
-function clearTokens(onlyCurrent: boolean = true): void {
-    const current = getActiveProvider();
-    if (current && onlyCurrent) {
-        localStorage.removeItem(`${current}_accessToken`);
-        localStorage.removeItem(`${current}_refreshToken`);
-        localStorage.removeItem(`${current}_user`);
-        const remaining = getActiveProvider();
-        if (remaining) {
-            localStorage.setItem(APP_PROVIDER_KEY, remaining);
-        } else {
-            localStorage.removeItem(APP_PROVIDER_KEY);
+export function clearTokens(target?: AuthProviderType | 'all' | boolean): void {
+    if (target === 'google') {
+        localStorage.removeItem('google_accessToken');
+        localStorage.removeItem('google_refreshToken');
+        localStorage.removeItem('google_user');
+        if (localStorage.getItem(APP_PROVIDER_KEY) === 'google') {
+            const remaining = hasTokensFor('telegram') ? 'telegram' : null;
+            if (remaining) {
+                localStorage.setItem(APP_PROVIDER_KEY, remaining);
+            } else {
+                localStorage.removeItem(APP_PROVIDER_KEY);
+            }
         }
-    } else {
+    } else if (target === 'telegram') {
+        localStorage.removeItem('telegram_accessToken');
+        localStorage.removeItem('telegram_refreshToken');
+        localStorage.removeItem('telegram_user');
+        if (localStorage.getItem(APP_PROVIDER_KEY) === 'telegram') {
+            const remaining = hasTokensFor('google') ? 'google' : null;
+            if (remaining) {
+                localStorage.setItem(APP_PROVIDER_KEY, remaining);
+            } else {
+                localStorage.removeItem(APP_PROVIDER_KEY);
+            }
+        }
+    } else if (target === 'all' || target === false) {
         localStorage.removeItem('google_accessToken');
         localStorage.removeItem('google_refreshToken');
         localStorage.removeItem('google_user');
@@ -111,6 +124,13 @@ function clearTokens(onlyCurrent: boolean = true): void {
         localStorage.removeItem('telegram_refreshToken');
         localStorage.removeItem('telegram_user');
         localStorage.removeItem(APP_PROVIDER_KEY);
+    } else {
+        const current = getActiveProvider();
+        if (current) {
+            clearTokens(current);
+        } else {
+            clearTokens('all');
+        }
     }
 }
 
@@ -252,16 +272,35 @@ class AuthService {
         }
     }
 
-    async logout(): Promise<void> {
-        const rt = getRefreshTokenValue();
-        if (rt) {
-            await fetch(`${API_BASE}/api/auth/logout`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refreshToken: rt }),
-            }).catch(() => {});
+    async logout(target?: AuthProviderType | 'all'): Promise<void> {
+        const toRevoke: string[] = [];
+        if (target === 'google') {
+            const rt = localStorage.getItem('google_refreshToken');
+            if (rt) toRevoke.push(rt);
+        } else if (target === 'telegram') {
+            const rt = localStorage.getItem('telegram_refreshToken');
+            if (rt) toRevoke.push(rt);
+        } else if (target === 'all') {
+            const gRt = localStorage.getItem('google_refreshToken');
+            const tRt = localStorage.getItem('telegram_refreshToken');
+            if (gRt) toRevoke.push(gRt);
+            if (tRt) toRevoke.push(tRt);
+        } else {
+            const rt = getRefreshTokenValue();
+            if (rt) toRevoke.push(rt);
         }
-        clearTokens(true);
+
+        await Promise.all(
+            toRevoke.map((rt) =>
+                fetch(`${API_BASE}/api/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ refreshToken: rt }),
+                }).catch(() => {})
+            )
+        );
+
+        clearTokens(target || 'all');
         const remaining = getActiveProvider();
         if (remaining) {
             this.user = loadUser();
