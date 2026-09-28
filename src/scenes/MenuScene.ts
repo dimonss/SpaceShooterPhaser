@@ -345,7 +345,8 @@ export class MenuScene extends BaseScene {
         modal.style.cssText = `
             background: #111827; border: 1px solid #374151;
             border-radius: 16px; width: 100%; max-width: 480px;
-            padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+            max-height: calc(100vh - 32px); overflow-y: auto; box-sizing: border-box;
+            padding: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
             color: #f3f4f6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             position: relative;
         `;
@@ -363,7 +364,7 @@ export class MenuScene extends BaseScene {
 
         // Title
         const header = document.createElement('div');
-        header.style.cssText = 'margin-bottom: 16px;';
+        header.style.cssText = 'margin-bottom: 16px; padding-right: 28px;';
         header.innerHTML = `
             <div style="font-size: 18px; font-weight: 700; color: #f9fafb; display: flex; align-items: center; gap: 8px;">
                 <span>🚪</span> Выход из аккаунта
@@ -395,15 +396,15 @@ export class MenuScene extends BaseScene {
         const btnStyle = (bg: string, color: string = '#ffffff') => `
             background: ${bg}; color: ${color}; border: none; border-radius: 8px;
             padding: 8px 14px; font-size: 13px; font-weight: 600; cursor: pointer;
-            transition: opacity 0.2s; white-space: nowrap;
+            transition: opacity 0.2s; white-space: nowrap; flex-shrink: 0;
         `;
 
         if (hasGoogle && hasTelegram) {
             // Option Google
             const gRow = document.createElement('div');
-            gRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 10px; background: #1f2937; border: 1px solid #374151;';
+            gRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px; border-radius: 10px; background: #1f2937; border: 1px solid #374151;';
             gRow.innerHTML = `
-                <div>
+                <div style="flex: 1 1 200px;">
                     <div style="font-size: 14px; font-weight: 600; color: #93c5fd;">🔵 Google</div>
                     <div style="font-size: 11px; color: #9ca3af;">Завершить сессию Google (Telegram останется)</div>
                 </div>
@@ -422,9 +423,9 @@ export class MenuScene extends BaseScene {
 
             // Option Telegram
             const tRow = document.createElement('div');
-            tRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 10px; background: #1f2937; border: 1px solid #374151;';
+            tRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px; border-radius: 10px; background: #1f2937; border: 1px solid #374151;';
             tRow.innerHTML = `
-                <div>
+                <div style="flex: 1 1 200px;">
                     <div style="font-size: 14px; font-weight: 600; color: #38bdf8;">✈️ Telegram</div>
                     <div style="font-size: 11px; color: #9ca3af;">Завершить сессию Telegram (Google останется)</div>
                 </div>
@@ -443,9 +444,9 @@ export class MenuScene extends BaseScene {
 
             // Option All
             const allRow = document.createElement('div');
-            allRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 10px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3);';
+            allRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px; border-radius: 10px; background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3);';
             allRow.innerHTML = `
-                <div>
+                <div style="flex: 1 1 200px;">
                     <div style="font-size: 14px; font-weight: 600; color: #f87171;">🚪 Выйти со всех сразу</div>
                     <div style="font-size: 11px; color: #9ca3af;">Полный выход из обоих аккаунтов</div>
                 </div>
@@ -465,9 +466,9 @@ export class MenuScene extends BaseScene {
             // Single provider
             const activeName = hasGoogle ? '🔵 Google (активен)' : '✈️ Telegram (активен)';
             const singleRow = document.createElement('div');
-            singleRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; padding: 12px; border-radius: 10px; background: #1f2937; border: 1px solid #374151;';
+            singleRow.style.cssText = 'display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; padding: 12px; border-radius: 10px; background: #1f2937; border: 1px solid #374151;';
             singleRow.innerHTML = `
-                <div>
+                <div style="flex: 1 1 200px;">
                     <div style="font-size: 14px; font-weight: 600; color: #e5e7eb;">${activeName}</div>
                     <div style="font-size: 11px; color: #9ca3af;">Текущая сессия</div>
                 </div>
